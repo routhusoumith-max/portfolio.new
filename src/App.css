@@ -1335,3 +1335,114 @@ select option {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* =========================
+   LOCATION SECTION
+========================= */
+
+.location-section {
+  padding: 100px 6%;
+  position: relative;
+}
+
+.location-grid {
+  max-width: 1200px;
+  margin: 50px auto 0;
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 30px;
+  align-items: stretch;
+}
+
+.location-info {
+  padding: 45px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.location-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 25px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.location-info h3 {
+  font-size: 28px;
+  margin-bottom: 15px;
+  letter-spacing: 1px;
+}
+
+.location-info p {
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.location-village {
+  color: white !important;
+  font-size: 22px !important;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.map-button {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 25px;
+  padding: 13px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: 0.3s ease;
+}
+
+.map-button:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.map-container {
+  min-height: 430px;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+}
+
+.portfolio-map {
+  width: 100%;
+  height: 100%;
+  min-height: 430px;
+  filter: saturate(0.8) contrast(1.05);
+}
+
+/* Mobile */
+
+@media (max-width: 800px) {
+  .location-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .location-info {
+    padding: 30px;
+  }
+
+  .map-container,
+  .portfolio-map {
+    min-height: 350px;
+  }
+}

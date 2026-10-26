@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import "./App.css";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
 const STORAGE_BUCKET = "portfolio-videos";
 
@@ -417,6 +419,74 @@ export default function App() {
       </div>
     );
   }
+
+
+<section className="location-section" id="location">
+  <div className="section-heading">
+    <span>MY LOCATION</span>
+    <h2>Where I'm From</h2>
+    <p>Connect with me from Ekgaon, Nirmal District, Telangana.</p>
+  </div>
+
+  <div className="location-grid">
+
+    <div className="location-info">
+      <div className="location-icon">📍</div>
+
+      <h3>ROUTHU SOUMITH</h3>
+
+      <p className="location-village">
+        Ekgaon
+      </p>
+
+      <p>
+        Nirmal District, Telangana, India
+      </p>
+
+      <a
+        href="https://www.google.com/maps/search/?api=1&query=Ekgaon%2C%20Nirmal%20District%2C%20Telangana%2C%20India"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="map-button"
+      >
+        Open in Google Maps ↗
+      </a>
+    </div>
+
+    <div className="map-container">
+      <MapContainer
+        center={[19.1, 78.3]}
+        zoom={10}
+        scrollWheelZoom={false}
+        className="portfolio-map"
+      >
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <Marker position={[19.1, 78.3]}>
+          <Popup>
+            <strong>ROUTHU SOUMITH</strong>
+            <br />
+            Ekgaon, Nirmal District
+            <br />
+            Telangana, India
+          </Popup>
+        </Marker>
+      </MapContainer>
+    </div>
+
+  </div>
+</section>
+
+
+
+
+
+
+
+
 
   if (page === "admin") {
     return (
