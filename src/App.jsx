@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import "./App.css";
 
 const STORAGE_BUCKET = "portfolio-videos";
 
 const CATEGORIES = [
+  "All",
   "Reel",
   "Cinematic Edit",
   "Short Film",
@@ -13,67 +14,41 @@ const CATEGORIES = [
   "Instagram Reel",
 ];
 
-function App() {
+export default function App() {
   const [projects, setProjects] = useState([]);
+  const [category, setCategory] = useState("All");
   const [loading, setLoading] = useState(true);
+
   const [session, setSession] = useState(null);
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [page, setPage] = useState(
+    window.location.pathname.startsWith("/admin") ? "admin" : "home"
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [signupMode, setSignupMode] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirmPassword, setShowSignupConfirmPassword] =
-    useState(false);
+  const [signupConfirm, setSignupConfirm] = useState("");
 
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
 
-  const [isResetMode, setIsResetMode] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
-  const [loginError, setLoginError] = useState("");
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const [uploading, setUploading] = useState(false);
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Reel");
+  const [uploadCategory, setUploadCategory] = useState("Reel");
   const [description, setDescription] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
-
-  const isAdminPage = window.location.pathname === "/admin";
-
-  // =========================
-  // LOAD PROJECTS
-  // =========================
-
-  const loadProjects = async () => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("published", true)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Project loading error:", error);
-      return;
-    }
-
-    setProjects(data || []);
-  };
-
-  // =========================
-  // AUTH LISTENER
-  // =========================
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadProjects();
@@ -89,40 +64,69 @@ function App() {
       setSession(newSession);
 
       if (event === "PASSWORD_RECOVERY") {
-        setIsResetMode(true);
+        setResetMode(true);
+        setPage("admin");
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  // =========================
-  // CLEAR MESSAGES
-  // =========================
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      document.documentElement.style.setProperty(
+        "--mouse-x",
+        `${e.clientX}px`
+      );
 
-  const clearMessages = () => {
-    setLoginError("");
-    setMessage("");
+      document.documentElement.style.setProperty(
+        "--mouse-y",
+        `${e.clientY}px`
+      );
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const loadProjects = async () => {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("published", true)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setProjects(data || []);
+    }
+
+    setLoading(false);
   };
 
-  // =========================
-  // LOGIN
-  // =========================
+  const filteredProjects =
+    category === "All"
+      ? projects
+      : projects.filter((project) => project.category === category);
+
+  const showHome = () => {
+    setPage("home");
+    window.history.pushState({}, "", "/");
+  };
+
+  const showAdmin = () => {
+    setPage("admin");
+    window.history.pushState({}, "", "/admin");
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    clearMessages();
+    setError("");
+    setMessage("");
 
-    if (!email.trim()) {
-      setLoginError("Please enter your email.");
-      return;
-    }
-
-    if (!password) {
-      setLoginError("Please enter your password.");
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
       return;
     }
 
@@ -132,106 +136,100 @@ function App() {
     });
 
     if (error) {
-      setLoginError(error.message);
+      console.error(error);
+      setError(error.message);
       return;
     }
 
     setSession(data.session);
-    setMessage("Login successful!");
+    setMessage("Login successful.");
   };
 
-  // =========================
-  // CREATE ACCOUNT
-  // =========================
-
-  const handleCreateAccount = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
 
-    clearMessages();
+    setError("");
+    setMessage("");
 
     if (!signupEmail.trim()) {
-      setLoginError("Please enter your email.");
+      setError("Enter your email.");
       return;
     }
 
     if (signupPassword.length < 6) {
-      setLoginError("Password must be at least 6 characters.");
+      setError("Password must contain at least 6 characters.");
       return;
     }
 
-    if (signupPassword !== signupConfirmPassword) {
-      setLoginError("Passwords do not match.");
+    if (signupPassword !== signupConfirm) {
+      setError("Passwords do not match.");
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: signupEmail.trim(),
       password: signupPassword,
     });
 
     if (error) {
-      setLoginError(error.message);
+      setError(error.message);
       return;
     }
 
-    setMessage(
-      "Account created successfully. Check your email if confirmation is enabled."
-    );
+    if (data.session) {
+      setSession(data.session);
+      setMessage("Account created successfully.");
+    } else {
+      setMessage(
+        "Account created. Check your email if confirmation is enabled."
+      );
+    }
 
     setSignupPassword("");
-    setSignupConfirmPassword("");
+    setSignupConfirm("");
   };
-
-  // =========================
-  // FORGOT PASSWORD
-  // =========================
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
 
-    clearMessages();
+    setError("");
+    setMessage("");
 
     if (!resetEmail.trim()) {
-      setLoginError("Please enter your email.");
+      setError("Enter your email.");
       return;
     }
+
+    const redirectUrl = `${window.location.origin}/admin`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(
       resetEmail.trim(),
       {
-        redirectTo: `${window.location.origin}/admin`,
+        redirectTo: redirectUrl,
       }
     );
 
     if (error) {
-      setLoginError(error.message);
+      setError(error.message);
       return;
     }
 
-    setMessage(
-      "Password reset email sent. Open the email and click the reset link."
-    );
+    setMessage("Password reset email sent.");
   };
 
-  // =========================
-  // UPDATE PASSWORD
-  // =========================
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
 
-  const handleUpdatePassword = async () => {
-    clearMessages();
-
-    if (!newPassword) {
-      setLoginError("Please enter a new password.");
-      return;
-    }
+    setError("");
+    setMessage("");
 
     if (newPassword.length < 6) {
-      setLoginError("Password must be at least 6 characters.");
+      setError("Password must contain at least 6 characters.");
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setLoginError("Passwords do not match.");
+    if (newPassword !== confirmNewPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
@@ -240,64 +238,47 @@ function App() {
     });
 
     if (error) {
-      setLoginError(error.message);
+      setError(error.message);
       return;
     }
 
-    setMessage("Password updated successfully!");
+    setMessage("Password updated successfully.");
 
     setNewPassword("");
-    setConfirmPassword("");
-    setIsResetMode(false);
-
-    window.history.replaceState({}, document.title, "/admin");
+    setConfirmNewPassword("");
+    setResetMode(false);
   };
-
-  // =========================
-  // LOGOUT
-  // =========================
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-
     setSession(null);
-    clearMessages();
-
-    window.location.href = "/";
+    setMessage("Logged out.");
   };
-
-  // =========================
-  // UPLOAD PROJECT
-  // =========================
 
   const handleUpload = async (e) => {
     e.preventDefault();
 
-    clearMessages();
+    setError("");
+    setMessage("");
 
     if (!title.trim()) {
-      alert("Please enter a project title.");
+      setError("Enter a project title.");
       return;
     }
 
     if (!videoFile) {
-      alert("Please select a video.");
+      setError("Select a video.");
       return;
     }
 
+    setUploading(true);
+
     try {
-      setUploading(true);
+      const cleanName = videoFile.name
+        .replace(/\s+/g, "-")
+        .replace(/[^a-zA-Z0-9._-]/g, "");
 
-      // -------------------------
-      // VIDEO
-      // -------------------------
-
-      const videoExtension =
-        videoFile.name.split(".").pop()?.toLowerCase() || "mp4";
-
-      const videoPath = `videos/${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}.${videoExtension}`;
+      const videoPath = `videos/${Date.now()}-${cleanName}`;
 
       const { error: videoError } = await supabase.storage
         .from(STORAGE_BUCKET)
@@ -314,52 +295,39 @@ function App() {
         .from(STORAGE_BUCKET)
         .getPublicUrl(videoPath);
 
-      const videoUrl = videoData.publicUrl;
-
-      // -------------------------
-      // THUMBNAIL
-      // -------------------------
-
       let thumbnailUrl = "";
 
       if (thumbnailFile) {
-        const thumbnailExtension =
-          thumbnailFile.name.split(".").pop()?.toLowerCase() || "jpg";
+        const cleanThumb = thumbnailFile.name
+          .replace(/\s+/g, "-")
+          .replace(/[^a-zA-Z0-9._-]/g, "");
 
-        const thumbnailPath = `thumbnails/${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}.${thumbnailExtension}`;
+        const thumbnailPath = `thumbnails/${Date.now()}-${cleanThumb}`;
 
-        const { error: thumbnailError } = await supabase.storage
+        const { error: thumbError } = await supabase.storage
           .from(STORAGE_BUCKET)
           .upload(thumbnailPath, thumbnailFile, {
             cacheControl: "3600",
             upsert: false,
           });
 
-        if (thumbnailError) {
-          throw thumbnailError;
+        if (!thumbError) {
+          const { data: thumbData } = supabase.storage
+            .from(STORAGE_BUCKET)
+            .getPublicUrl(thumbnailPath);
+
+          thumbnailUrl = thumbData.publicUrl;
         }
-
-        const { data: thumbnailData } = supabase.storage
-          .from(STORAGE_BUCKET)
-          .getPublicUrl(thumbnailPath);
-
-        thumbnailUrl = thumbnailData.publicUrl;
       }
-
-      // -------------------------
-      // DATABASE
-      // -------------------------
 
       const { error: databaseError } = await supabase
         .from("projects")
         .insert([
           {
             title: title.trim(),
-            category,
+            category: uploadCategory,
             description: description.trim(),
-            video_url: videoUrl,
+            video_url: videoData.publicUrl,
             thumbnail_url: thumbnailUrl,
             published: true,
           },
@@ -369,1196 +337,692 @@ function App() {
         throw databaseError;
       }
 
-      // -------------------------
-      // RESET FORM
-      // -------------------------
-
       setTitle("");
-      setCategory("Reel");
       setDescription("");
       setVideoFile(null);
       setThumbnailFile(null);
 
       const videoInput = document.getElementById("videoInput");
-
-      if (videoInput) {
-        videoInput.value = "";
-      }
-
       const thumbnailInput = document.getElementById("thumbnailInput");
 
-      if (thumbnailInput) {
-        thumbnailInput.value = "";
-      }
+      if (videoInput) videoInput.value = "";
+      if (thumbnailInput) thumbnailInput.value = "";
+
+      setMessage("Video published successfully.");
 
       await loadProjects();
-
-      setMessage("Video uploaded successfully!");
-    } catch (error) {
-      console.error("UPLOAD ERROR:", error);
-
-      alert(error.message || "Upload failed.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Upload failed.");
     } finally {
       setUploading(false);
     }
   };
 
-  // =========================
-  // DELETE PROJECT
-  // =========================
-
-  const deleteProject = async (project) => {
+  const handleDelete = async (project) => {
     const confirmed = window.confirm(
-      `Delete "${project.title}"?`
+      `Delete "${project.title}" from your portfolio?`
     );
 
-    if (!confirmed) {
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+
+    const { error } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", project.id);
+
+    if (error) {
+      setError(error.message);
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from("projects")
-        .delete()
-        .eq("id", project.id);
+    setProjects((current) =>
+      current.filter((item) => item.id !== project.id)
+    );
 
-      if (error) {
-        throw error;
-      }
-
-      await loadProjects();
-
-      setMessage("Project deleted successfully.");
-    } catch (error) {
-      console.error("DELETE ERROR:", error);
-
-      alert(error.message || "Could not delete project.");
-    }
+    setMessage("Project deleted.");
   };
 
-  const closeMobileMenu = () => {
-    setMobileMenu(false);
+  const handleCardMove = (e) => {
+    const card = e.currentTarget;
+
+    const rect = card.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const rotateX = ((y / rect.height) - 0.5) * -8;
+    const rotateY = ((x / rect.width) - 0.5) * 8;
+
+    card.style.transform = `
+      perspective(1000px)
+      rotateX(${rotateX}deg)
+      rotateY(${rotateY}deg)
+      translateY(-8px)
+    `;
   };
 
-  // =========================
-  // LOADING
-  // =========================
+  const resetCard = (e) => {
+    e.currentTarget.style.transform = "";
+  };
 
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="loading-orb" />
-        <div>Loading Portfolio...</div>
+        <div className="loader-orb"></div>
+        <p>Loading portfolio...</p>
       </div>
     );
   }
 
-  // =========================
-  // PASSWORD RESET
-  // =========================
-
-  if (isResetMode) {
+  if (page === "admin") {
     return (
-      <AuthShell
-        title="Create New Password"
-        subtitle="Set a new password for your portfolio admin account."
-      >
-        {loginError && (
-          <div className="alert error">
-            {loginError}
-          </div>
-        )}
+      <div className="app">
+        <div className="cursor-glow"></div>
 
-        {message && (
-          <div className="alert success">
-            {message}
-          </div>
-        )}
-
-        <PasswordInput
-          value={newPassword}
-          setValue={setNewPassword}
-          show={showNewPassword}
-          setShow={setShowNewPassword}
-          placeholder="New Password"
-        />
-
-        <PasswordInput
-          value={confirmPassword}
-          setValue={setConfirmPassword}
-          show={showConfirmPassword}
-          setShow={setShowConfirmPassword}
-          placeholder="Confirm New Password"
-        />
-
-        <button
-          className="auth-primary"
-          onClick={handleUpdatePassword}
-        >
-          Update Password
-        </button>
-
-        <button
-          className="text-button"
-          onClick={() => {
-            setIsResetMode(false);
-            clearMessages();
-          }}
-        >
-          ← Back to Login
-        </button>
-      </AuthShell>
-    );
-  }
-
-  // =========================
-  // ADMIN PAGE
-  // =========================
-
-  if (isAdminPage) {
-    // -------------------------
-    // CREATE ACCOUNT
-    // -------------------------
-
-    if (showCreateAccount) {
-      return (
-        <AuthShell
-          title="Create New Account"
-          subtitle="Create your portfolio admin account."
-        >
-          {loginError && (
-            <div className="alert error">
-              {loginError}
-            </div>
-          )}
-
-          {message && (
-            <div className="alert success">
-              {message}
-            </div>
-          )}
-
-          <form
-            onSubmit={handleCreateAccount}
-            className="auth-form"
-          >
-            <input
-              className="field"
-              type="email"
-              placeholder="Email"
-              value={signupEmail}
-              onChange={(e) =>
-                setSignupEmail(e.target.value)
-              }
-            />
-
-            <PasswordInput
-              value={signupPassword}
-              setValue={setSignupPassword}
-              show={showSignupPassword}
-              setShow={setShowSignupPassword}
-              placeholder="Create Password"
-            />
-
-            <PasswordInput
-              value={signupConfirmPassword}
-              setValue={setSignupConfirmPassword}
-              show={showSignupConfirmPassword}
-              setShow={setShowSignupConfirmPassword}
-              placeholder="Confirm Password"
-            />
-
-            <button
-              className="auth-primary"
-              type="submit"
-            >
-              Create Account
-            </button>
-          </form>
-
-          <button
-            className="text-button"
-            onClick={() => {
-              setShowCreateAccount(false);
-              clearMessages();
-            }}
-          >
-            ← Back to Login
-          </button>
-        </AuthShell>
-      );
-    }
-
-    // -------------------------
-    // FORGOT PASSWORD
-    // -------------------------
-
-    if (showForgotPassword) {
-      return (
-        <AuthShell
-          title="Reset Password"
-          subtitle="Enter your email and we'll send you a password reset link."
-        >
-          {loginError && (
-            <div className="alert error">
-              {loginError}
-            </div>
-          )}
-
-          {message && (
-            <div className="alert success">
-              {message}
-            </div>
-          )}
-
-          <form
-            onSubmit={handleForgotPassword}
-            className="auth-form"
-          >
-            <input
-              className="field"
-              type="email"
-              placeholder="Your Email"
-              value={resetEmail}
-              onChange={(e) =>
-                setResetEmail(e.target.value)
-              }
-            />
-
-            <button
-              className="auth-primary"
-              type="submit"
-            >
-              Send Reset Link
-            </button>
-          </form>
-
-          <button
-            className="text-button"
-            onClick={() => {
-              setShowForgotPassword(false);
-              clearMessages();
-            }}
-          >
-            ← Back to Login
-          </button>
-        </AuthShell>
-      );
-    }
-
-    // -------------------------
-    // LOGIN
-    // -------------------------
-
-    if (!session) {
-      return (
-        <AuthShell
-          title="Welcome Back"
-          subtitle="Login to manage your video portfolio."
-        >
-          {loginError && (
-            <div className="alert error">
-              {loginError}
-            </div>
-          )}
-
-          {message && (
-            <div className="alert success">
-              {message}
-            </div>
-          )}
-
-          <form
-            onSubmit={handleLogin}
-            className="auth-form"
-          >
-            <input
-              className="field"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
-            />
-
-            <PasswordInput
-              value={password}
-              setValue={setPassword}
-              show={showPassword}
-              setShow={setShowPassword}
-              placeholder="Password"
-            />
-
-            <button
-              className="auth-primary"
-              type="submit"
-            >
-              Login
-            </button>
-          </form>
-
-          <button
-            className="text-button"
-            onClick={() => {
-              setShowForgotPassword(true);
-              setResetEmail(email);
-              clearMessages();
-            }}
-          >
-            Forgot Password?
+        <nav className="navbar">
+          <button className="logo" onClick={showHome}>
+            <span>RS</span>
+            <strong>ROUTHU SOUMITH</strong>
           </button>
 
-          <button
-            className="outline-button"
-            onClick={() => {
-              setShowCreateAccount(true);
-              clearMessages();
-            }}
-          >
-            Create New Account
+          <button className="nav-button" onClick={showHome}>
+            ← Portfolio
           </button>
-
-          <button
-            className="text-button"
-            onClick={() => {
-              window.location.href = "/";
-            }}
-          >
-            ← Back to Portfolio
-          </button>
-        </AuthShell>
-      );
-    }
-
-    // -------------------------
-    // ADMIN DASHBOARD
-    // -------------------------
-
-    return (
-      <div className="admin-page">
-        <nav className="admin-nav">
-          <a
-            href="/"
-            className="brand"
-          >
-            <span className="brand-mark">S</span>
-            <span>SOUMITH</span>
-          </a>
-
-          <div className="admin-nav-right">
-            <span className="admin-badge">
-              ADMIN
-            </span>
-
-            <button
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </div>
         </nav>
 
-        <main className="admin-container">
-          <div className="admin-heading">
-            <div>
-              <span className="eyebrow">
-                CREATOR STUDIO
-              </span>
+        <main className="admin-page">
+          {!session ? (
+            <div className="auth-card glass-card">
+              <div className="auth-orb"></div>
 
-              <h1>
-                Portfolio Dashboard
-              </h1>
+              <div className="auth-heading">
+                <span className="eyebrow">PRIVATE AREA</span>
+                <h1>
+                  {resetMode
+                    ? "Create new password"
+                    : signupMode
+                    ? "Create account"
+                    : forgotMode
+                    ? "Reset password"
+                    : "Admin login"}
+                </h1>
 
-              <p>
-                Upload and manage your latest
-                video work.
-              </p>
-            </div>
-
-            <a
-              className="view-site-button"
-              href="/"
-            >
-              View Portfolio ↗
-            </a>
-          </div>
-
-          {message && (
-            <div className="alert success">
-              {message}
-            </div>
-          )}
-
-          <div className="admin-layout">
-            {/* UPLOAD PANEL */}
-
-            <section className="panel upload-panel">
-              <div className="panel-heading">
-                <span className="panel-icon">
-                  ＋
-                </span>
-
-                <div>
-                  <h2>
-                    Add New Project
-                  </h2>
-
-                  <p>
-                    Publish a new edit to your
-                    portfolio.
-                  </p>
-                </div>
+                <p>
+                  Manage your video portfolio from one professional dashboard.
+                </p>
               </div>
 
-              <form
-                onSubmit={handleUpload}
-                className="upload-form"
-              >
-                <div className="field-group">
-                  <label>
-                    Project title
-                  </label>
+              {error && <div className="alert error">{error}</div>}
+              {message && <div className="alert success">{message}</div>}
+
+              {resetMode ? (
+                <form onSubmit={handleUpdatePassword} className="auth-form">
+                  <label>New password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password"
+                  />
+
+                  <label>Confirm password</label>
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) =>
+                      setConfirmNewPassword(e.target.value)
+                    }
+                    placeholder="Confirm password"
+                  />
+
+                  <button className="primary-button" type="submit">
+                    Update Password
+                  </button>
+                </form>
+              ) : forgotMode ? (
+                <form onSubmit={handleForgotPassword} className="auth-form">
+                  <label>Email address</label>
 
                   <input
-                    className="field"
-                    type="text"
-                    placeholder="e.g. Cinematic Travel Reel"
-                    value={title}
-                    onChange={(e) =>
-                      setTitle(e.target.value)
-                    }
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="you@example.com"
                   />
-                </div>
 
-                <div className="field-group">
-                  <label>
-                    Category
-                  </label>
+                  <button className="primary-button" type="submit">
+                    Send Reset Email
+                  </button>
 
-                  <select
-                    className="field"
-                    value={category}
-                    onChange={(e) =>
-                      setCategory(e.target.value)
-                    }
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      setForgotMode(false);
+                      setError("");
+                      setMessage("");
+                    }}
                   >
-                    {CATEGORIES.map((item) => (
-                      <option
-                        key={item}
-                        value={item}
-                      >
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    Back to Login
+                  </button>
+                </form>
+              ) : signupMode ? (
+                <form onSubmit={handleSignup} className="auth-form">
+                  <label>Email address</label>
 
-                <div className="field-group">
-                  <label>
-                    Description
-                  </label>
-
-                  <textarea
-                    className="field textarea"
-                    placeholder="Short description of the edit"
-                    value={description}
-                    onChange={(e) =>
-                      setDescription(e.target.value)
-                    }
+                  <input
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="you@example.com"
                   />
-                </div>
 
-                <div className="file-grid">
-                  <label className="file-drop">
-                    <span className="file-icon">
-                      ▶
-                    </span>
+                  <label>Password</label>
 
-                    <strong>
-                      Video
-                    </strong>
+                  <input
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Minimum 6 characters"
+                  />
 
-                    <small>
-                      {videoFile
-                        ? videoFile.name
-                        : "Choose MP4 or video"}
-                    </small>
+                  <label>Confirm password</label>
 
+                  <input
+                    type="password"
+                    value={signupConfirm}
+                    onChange={(e) => setSignupConfirm(e.target.value)}
+                    placeholder="Confirm password"
+                  />
+
+                  <button className="primary-button" type="submit">
+                    Create Account
+                  </button>
+
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      setSignupMode(false);
+                      setError("");
+                      setMessage("");
+                    }}
+                  >
+                    Already have an account? Login
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleLogin} className="auth-form">
+                  <label>Email address</label>
+
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+
+                  <label>Password</label>
+
+                  <div className="password-box">
                     <input
-                      id="videoInput"
-                      type="file"
-                      accept="video/*"
-                      onChange={(e) =>
-                        setVideoFile(
-                          e.target.files?.[0] ||
-                            null
-                        )
-                      }
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Your password"
                     />
-                  </label>
 
-                  <label className="file-drop">
-                    <span className="file-icon">
-                      ▧
-                    </span>
-
-                    <strong>
-                      Thumbnail
-                    </strong>
-
-                    <small>
-                      {thumbnailFile
-                        ? thumbnailFile.name
-                        : "Optional image"}
-                    </small>
-
-                    <input
-                      id="thumbnailInput"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        setThumbnailFile(
-                          e.target.files?.[0] ||
-                            null
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-
-                <button
-                  className="publish-button"
-                  type="submit"
-                  disabled={uploading}
-                >
-                  {uploading
-                    ? "Uploading..."
-                    : "Publish Project →"}
-                </button>
-              </form>
-            </section>
-
-            {/* PROJECTS PANEL */}
-
-            <section className="panel projects-panel">
-              <div className="panel-heading">
-                <span className="panel-icon">
-                  ▦
-                </span>
-
-                <div>
-                  <h2>
-                    Your Projects
-                  </h2>
-
-                  <p>
-                    {projects.length} published
-                    project
-                    {projects.length === 1
-                      ? ""
-                      : "s"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="admin-project-list">
-                {projects.length === 0 ? (
-                  <div className="empty-admin">
-                    <div>◌</div>
-
-                    <p>
-                      No projects uploaded yet.
-                    </p>
-                  </div>
-                ) : (
-                  projects.map((project) => (
-                    <article
-                      className="admin-project-card"
-                      key={project.id}
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      <div className="admin-project-media">
-                        {project.thumbnail_url ? (
-                          <img
-                            src={project.thumbnail_url}
-                            alt={project.title}
-                          />
-                        ) : (
-                          <video
-                            src={project.video_url}
-                            controls
-                            preload="metadata"
-                          />
-                        )}
-                      </div>
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
 
-                      <div className="admin-project-info">
-                        <span className="category-pill">
-                          {project.category}
-                        </span>
+                  <button className="primary-button" type="submit">
+                    Login
+                  </button>
 
-                        <h3>
-                          {project.title}
-                        </h3>
+                  <div className="auth-links">
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => {
+                        setForgotMode(true);
+                        setError("");
+                        setMessage("");
+                      }}
+                    >
+                      Forgot Password?
+                    </button>
 
-                        {project.description && (
-                          <p>
-                            {project.description}
-                          </p>
-                        )}
-
-                        <button
-                          className="delete-button"
-                          onClick={() =>
-                            deleteProject(project)
-                          }
-                        >
-                          Delete Project
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </section>
-          </div>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => {
+                        setSignupMode(true);
+                        setError("");
+                        setMessage("");
+                      }}
+                    >
+                      Create New Account
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : (
+            <AdminDashboard
+              projects={projects}
+              title={title}
+              setTitle={setTitle}
+              uploadCategory={uploadCategory}
+              setUploadCategory={setUploadCategory}
+              description={description}
+              setDescription={setDescription}
+              videoFile={videoFile}
+              setVideoFile={setVideoFile}
+              thumbnailFile={thumbnailFile}
+              setThumbnailFile={setThumbnailFile}
+              uploading={uploading}
+              handleUpload={handleUpload}
+              handleDelete={handleDelete}
+              handleLogout={handleLogout}
+              message={message}
+              error={error}
+            />
+          )}
         </main>
       </div>
     );
   }
 
-  // =========================
-  // PUBLIC PORTFOLIO
-  // =========================
-
   return (
-    <div className="portfolio-page">
-      {/* NAVBAR */}
+    <div className="app">
+      <div className="cursor-glow"></div>
 
       <nav className="navbar">
-        <a
-          href="#home"
-          className="brand"
-          onClick={closeMobileMenu}
-        >
-          <span className="brand-mark">
-            S
-          </span>
-
-          <span>
-            SOUMITH
-          </span>
-        </a>
-
-        <div
-          className={`nav-links ${
-            mobileMenu ? "open" : ""
-          }`}
-        >
-          <a
-            href="#home"
-            onClick={closeMobileMenu}
-          >
-            Home
-          </a>
-
-          <a
-            href="#work"
-            onClick={closeMobileMenu}
-          >
-            Works
-          </a>
-
-          <a
-            href="#about"
-            onClick={closeMobileMenu}
-          >
-            About
-          </a>
-
-          <a
-            href="#services"
-            onClick={closeMobileMenu}
-          >
-            Services
-          </a>
-
-          <a
-            href="#contact"
-            onClick={closeMobileMenu}
-          >
-            Contact
-          </a>
-
-          <a
-            className="nav-admin"
-            href="/admin"
-          >
-            Admin
-          </a>
-        </div>
-
-        <button
-          className="mobile-menu-button"
-          onClick={() =>
-            setMobileMenu((value) => !value)
-          }
-          aria-label="Toggle navigation"
-        >
-          {mobileMenu ? "×" : "☰"}
+        <button className="logo" onClick={showHome}>
+          <span>RS</span>
+          <strong>ROUTHU SOUMITH</strong>
         </button>
+
+        <div className="nav-links">
+          <a href="#work">Work</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+
+          <button className="nav-button" onClick={showAdmin}>
+            Admin
+          </button>
+        </div>
       </nav>
 
       <main>
-        {/* HERO */}
+        <section className="hero">
+          <div className="hero-grid"></div>
 
-        <section
-          id="home"
-          className="hero-section"
-        >
-          <div className="hero-grid" />
-
-          <div className="hero-orb orb-one" />
-          <div className="hero-orb orb-two" />
+          <div className="floating-shape shape-one"></div>
+          <div className="floating-shape shape-two"></div>
+          <div className="floating-shape shape-three"></div>
 
           <div className="hero-content">
-            <div className="availability">
-              <span />
-              Available for creative projects
-            </div>
-
-            <span className="eyebrow">
-              VIDEO EDITOR · CREATIVE · AI
-            </span>
+            <span className="eyebrow">VIDEO EDITOR • CREATIVE DESIGNER</span>
 
             <h1>
-              Turning raw footage
-              <br />
-              into{" "}
-              <span>
-                visual stories.
-              </span>
+              Turning raw footage into
+              <span> visual stories.</span>
             </h1>
 
             <p>
-              Professional video editing,
-              cinematic storytelling, motion
-              design and AI-powered creative
-              edits.
+              Cinematic edits, reels, motion design and AI-powered creative
+              work crafted with precision.
             </p>
 
-            <div className="hero-actions">
-              <a
-                className="primary-button"
-                href="#work"
-              >
-                Explore My Work{" "}
-                <span>↗</span>
+            <div className="hero-buttons">
+              <a href="#work" className="primary-button">
+                Explore My Work
               </a>
 
-              <a
-                className="secondary-button"
-                href="#contact"
-              >
-                Let's Connect
+              <a href="#contact" className="secondary-button">
+                Let's Work Together
               </a>
-            </div>
-
-            <div className="hero-tools">
-              <span>
-                Premiere pro
-              </span>
-
-              <span>
-                Photoshop
-              </span>
-
-              <span>
-                CapCut
-              </span>
-
-              <span>
-                AI Creative Tools
-              </span>
             </div>
           </div>
 
-          <div className="scroll-cue">
-            SCROLL <span>↓</span>
+          <div className="hero-3d">
+            <div className="cube">
+              <div className="cube-face front">EDIT</div>
+              <div className="cube-face back">CREATE</div>
+              <div className="cube-face right">CUT</div>
+              <div className="cube-face left">DESIGN</div>
+              <div className="cube-face top">RS</div>
+              <div className="cube-face bottom">VIDEO</div>
+            </div>
+          </div>
+
+          <div className="scroll-indicator">
+            <span></span>
+            Scroll to explore
           </div>
         </section>
 
-        {/* WORK */}
-
-        <section
-          id="work"
-          className="section work-section"
-        >
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">
-                SELECTED WORK
-              </span>
-
-              <h2>
-                Projects that{" "}
-                <span>
-                  move.
-                </span>
-              </h2>
-            </div>
-
-            <span className="project-count">
-              {projects.length
-                .toString()
-                .padStart(2, "0")}{" "}
-              PROJECTS
-            </span>
+        <section className="stats-section">
+          <div>
+            <strong>{projects.length.toString().padStart(2, "0")}</strong>
+            <span>Projects</span>
           </div>
 
-          {projects.length === 0 ? (
-            <div className="empty-state">
-              <h3>
-                Projects coming soon.
-              </h3>
+          <div>
+            <strong>06</strong>
+            <span>Creative Categories</span>
+          </div>
 
+          <div>
+            <strong>24/7</strong>
+            <span>Creative Mindset</span>
+          </div>
+        </section>
+
+        <section id="work" className="work-section">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">SELECTED WORK</span>
+              <h2>My creative universe.</h2>
+            </div>
+
+            <p>
+              A collection of edits, experiments and visual stories.
+            </p>
+          </div>
+
+          <div className="category-bar">
+            {CATEGORIES.map((item) => (
+              <button
+                key={item}
+                className={category === item ? "active" : ""}
+                onClick={() => setCategory(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="empty-state">Loading projects...</div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">✦</div>
+              <h3>No projects yet</h3>
               <p>
-                New edits will appear here
-                after you publish them from
-                the admin dashboard.
+                Login to the admin dashboard and upload your first project.
               </p>
             </div>
           ) : (
             <div className="project-grid">
-              {projects.map(
-                (project, index) => (
-                  <article
-                    className="project-card"
-                    key={project.id}
-                  >
-                    <div className="project-media">
-                      {project.thumbnail_url ? (
-                        <img
-                          src={
-                            project.thumbnail_url
-                          }
-                          alt={
-                            project.title
-                          }
-                        />
-                      ) : (
-                        <video
-                          src={
-                            project.video_url
-                          }
-                          controls
-                          preload="metadata"
-                        />
-                      )}
+              {filteredProjects.map((project, index) => (
+                <article
+                  className="project-card"
+                  key={project.id}
+                  onMouseMove={handleCardMove}
+                  onMouseLeave={resetCard}
+                >
+                  <div className="project-number">
+                    {(index + 1).toString().padStart(2, "0")}
+                  </div>
 
-                      <div className="project-number">
-                        {String(index + 1).padStart(
-                          2,
-                          "0"
-                        )}
-                      </div>
-                    </div>
+                  <div className="video-wrapper">
+                    <video
+                      src={project.video_url}
+                      controls
+                      preload="metadata"
+                      poster={project.thumbnail_url || undefined}
+                    />
+                  </div>
 
-                    <div className="project-body">
-                      <span className="category-pill">
+                  <div className="project-info">
+                    <div>
+                      <span className="project-category">
                         {project.category}
                       </span>
 
-                      <h3>
-                        {project.title}
-                      </h3>
+                      <h3>{project.title}</h3>
 
                       {project.description && (
-                        <p>
-                          {project.description}
-                        </p>
+                        <p>{project.description}</p>
                       )}
                     </div>
-                  </article>
-                )
-              )}
+
+                    <span className="project-arrow">↗</span>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </section>
 
-        {/* ABOUT */}
-
-        <section
-          id="about"
-          className="section about-section"
-        >
-          <div className="about-layout">
-            <div>
-              <span className="eyebrow">
-                ABOUT ME
-              </span>
-
-              <h2>
-                Creative editing.
-                <br />
-                <span>
-                  Technical thinking.
-                </span>
-              </h2>
-            </div>
-
-            <div className="about-copy">
-              <p>
-                I'm Soumith, a video editor
-                focused on creating engaging
-                cinematic, social-media and
-                AI-powered content. I combine
-                editing, storytelling and
-                technology to turn ideas into
-                impactful visuals.
-              </p>
-
-              <div className="skill-list">
-                <span>
-                  Video Editing
-                </span>
-
-                <span>
-                  Cinematic Storytelling
-                </span>
-
-                <span>
-                  Motion Design
-                </span>
-
-                <span>
-                  AI Creative
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SERVICES */}
-
-        <section
-          id="services"
-          className="section services-section"
-        >
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">
-                WHAT I DO
-              </span>
-
-              <h2>
-                Built for{" "}
-                <span>
-                  impact.
-                </span>
-              </h2>
-            </div>
-          </div>
-
-          <div className="service-grid">
-            <div className="service-card">
-              <span>01</span>
-
-              <h3>
-                Reels & Short Form
-              </h3>
-
-              <p>
-                Fast-paced social edits
-                designed to hold attention
-                and communicate clearly.
-              </p>
-            </div>
-
-            <div className="service-card">
-              <span>02</span>
-
-              <h3>
-                Cinematic Edits
-              </h3>
-
-              <p>
-                Story-driven edits with
-                pacing, sound and visual
-                treatment for a polished
-                finish.
-              </p>
-            </div>
-
-            <div className="service-card">
-              <span>03</span>
-
-              <h3>
-                AI Creative
-              </h3>
-
-              <p>
-                AI-assisted visuals and
-                creative workflows combined
-                with human editing.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* CONTACT */}
-
-        <section
-          id="contact"
-          className="section contact-section"
-        >
-          <div className="contact-card">
-            <span className="eyebrow">
-              CONTACT
-            </span>
+        <section id="about" className="about-section">
+          <div className="about-card">
+            <span className="eyebrow">ABOUT ME</span>
 
             <h2>
-              Have a story
-              <br />
-              <span>
-                to tell?
-              </span>
+              Creativity meets
+              <span> technology.</span>
             </h2>
 
             <p>
-              Let's turn your footage into
-              something people remember.
+              I'm Routhu Soumith, a video editor focused on creating
+              cinematic, engaging and modern visual experiences. I work with
+              Premiere Pro, Photoshop, CapCut and AI-powered creative tools.
             </p>
 
+            <div className="tools">
+              <span>Premiere Pro</span>
+              <span>Photoshop</span>
+              <span>CapCut</span>
+              <span>AI Tools</span>
+              <span>Motion Design</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="contact" className="contact-section">
+          <span className="eyebrow">LET'S CREATE</span>
+
+          <h2>
+            Have an idea?
+            <br />
+            <span>Let's turn it into motion.</span>
+          </h2>
+
+          <a
+            className="primary-button large"
+            href="mailto:routhusoumith@gmail.com"
+          >
+            Start a Project →
+          </a>
+
+          <div className="social-links">
             <a
-              className="primary-button"
-              href="mailto:hello@example.com"
+              href="https://www.instagram.com/routhu_soumith/"
+              target="_blank"
+              rel="noreferrer"
             >
-              Start a Conversation ↗
+              Instagram
+            </a>
+
+            <a
+              href="https://soumith-portfolio-live.vercel.app"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Portfolio
             </a>
           </div>
         </section>
       </main>
 
-      {/* FOOTER */}
-
-      <footer className="footer">
-        <div>
-          <strong>
-            SOUMITH
-          </strong>
-
-          <span>
-            Video Editor · Creative · AI
-          </span>
-        </div>
-
-        <div className="footer-links">
-          <a href="#home">
-            Home
-          </a>
-
-          <a href="#work">
-            Works
-          </a>
-
-          <a href="#about">
-            About
-          </a>
-
-          <a href="/admin">
-            Admin
-          </a>
-        </div>
-
-        <p>
-          © {new Date().getFullYear()}{" "}
-          Soumith. All rights reserved.
-        </p>
+      <footer>
+        <span>© {new Date().getFullYear()} Routhu Soumith</span>
+        <span>Built for visual storytelling.</span>
       </footer>
     </div>
   );
 }
 
-// =========================
-// AUTH SHELL
-// =========================
-
-function AuthShell({
+function AdminDashboard({
+  projects,
   title,
-  subtitle,
-  children,
+  setTitle,
+  uploadCategory,
+  setUploadCategory,
+  description,
+  setDescription,
+  videoFile,
+  setVideoFile,
+  thumbnailFile,
+  setThumbnailFile,
+  uploading,
+  handleUpload,
+  handleDelete,
+  handleLogout,
+  message,
+  error,
 }) {
   return (
-    <div className="auth-page">
-      <div className="auth-glow" />
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <div>
+          <span className="eyebrow">CREATOR CONTROL CENTER</span>
+          <h1>Portfolio Dashboard</h1>
+          <p>Upload your latest work and publish it instantly.</p>
+        </div>
 
-      <div className="auth-card">
-        <a
-          href="/"
-          className="auth-logo"
-        >
-          <span className="brand-mark">
-            S
-          </span>
+        <button className="logout-button" onClick={handleLogout}>
+          Logout
+        </button>
+      </div>
 
-          <span>
-            SOUMITH
-          </span>
-        </a>
+      {error && <div className="alert error">{error}</div>}
+      {message && <div className="alert success">{message}</div>}
 
-        <span className="eyebrow">
-          PORTFOLIO ADMIN
-        </span>
+      <div className="dashboard-grid">
+        <form className="upload-card glass-card" onSubmit={handleUpload}>
+          <div className="card-heading">
+            <span className="card-icon">＋</span>
 
-        <h1>
-          {title}
-        </h1>
+            <div>
+              <h2>Upload New Work</h2>
+              <p>Add a new video to your portfolio.</p>
+            </div>
+          </div>
 
-        <p className="auth-subtitle">
-          {subtitle}
-        </p>
+          <label>Project title</label>
 
-        {children}
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Example: Cinematic Travel Edit"
+          />
+
+          <label>Category</label>
+
+          <select
+            value={uploadCategory}
+            onChange={(e) => setUploadCategory(e.target.value)}
+          >
+            {CATEGORIES.filter((item) => item !== "All").map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+
+          <label>Description</label>
+
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the project..."
+            rows="4"
+          />
+
+          <label>Video</label>
+
+          <input
+            id="videoInput"
+            type="file"
+            accept="video/*"
+            onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+          />
+
+          <label>Thumbnail</label>
+
+          <input
+            id="thumbnailInput"
+            type="file"
+            accept="image/*"
+            onChange={(e) =>
+              setThumbnailFile(e.target.files?.[0] || null)
+            }
+          />
+
+          <button
+            className="primary-button upload-button"
+            type="submit"
+            disabled={uploading}
+          >
+            {uploading ? "Uploading..." : "Publish Project →"}
+          </button>
+        </form>
+
+        <div className="projects-admin">
+          <div className="card-heading">
+            <div>
+              <span className="eyebrow">LIBRARY</span>
+              <h2>Your Projects</h2>
+            </div>
+
+            <span className="project-count">{projects.length}</span>
+          </div>
+
+          {projects.length === 0 ? (
+            <div className="empty-admin">
+              Your uploaded projects will appear here.
+            </div>
+          ) : (
+            <div className="admin-project-list">
+              {projects.map((project) => (
+                <div className="admin-project" key={project.id}>
+                  <div className="admin-thumb">
+                    {project.thumbnail_url ? (
+                      <img src={project.thumbnail_url} alt="" />
+                    ) : (
+                      <span>▶</span>
+                    )}
+                  </div>
+
+                  <div className="admin-project-info">
+                    <span>{project.category}</span>
+                    <h3>{project.title}</h3>
+                  </div>
+
+                  <button
+                    className="delete-button"
+                    onClick={() => handleDelete(project)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-
-// =========================
-// PASSWORD INPUT
-// =========================
-
-function PasswordInput({
-  value,
-  setValue,
-  show,
-  setShow,
-  placeholder,
-}) {
-  return (
-    <div className="password-field">
-      <input
-        className="field"
-        type={show ? "text" : "password"}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) =>
-          setValue(e.target.value)
-        }
-      />
-
-      <button
-        type="button"
-        onClick={() =>
-          setShow((value) => !value)
-        }
-      >
-        {show ? "Hide" : "Show"}
-      </button>
-    </div>
-  );
-}
-
-export default App;
