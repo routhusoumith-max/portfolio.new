@@ -949,7 +949,7 @@ export default function App() {
         </a>
 
         <a
-          href="https://github.com/routhusoumith-max"
+          href="https://github.com/routhusoumith"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -999,49 +999,6 @@ export default function App() {
     </div>
   </div>
 </section>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
