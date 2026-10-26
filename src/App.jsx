@@ -897,6 +897,157 @@ export default function App() {
 </section>
 
 
+{/* =========================
+    CONTACT SECTION
+========================= */}
+
+<section className="contact-section" id="contact">
+  <div className="section-heading">
+    <span>LET'S CONNECT</span>
+    <h2>Let's Create Something Great</h2>
+    <p>
+      I'm open to video editing projects, creative collaborations,
+      and internship opportunities.
+    </p>
+  </div>
+
+  <div className="contact-grid">
+
+    {/* Contact Card */}
+    <div className="contact-card">
+      <div className="contact-card-icon">✉️</div>
+
+      <h3>Get In Touch</h3>
+
+      <p>
+        Have a project or collaboration in mind?
+        Feel free to reach out.
+      </p>
+
+      <a
+        href="mailto:YOUR_EMAIL@gmail.com"
+        className="contact-button"
+      >
+        Send Me an Email ↗
+      </a>
+    </div>
+
+    {/* Social Card */}
+    <div className="contact-card">
+      <div className="contact-card-icon">🌐</div>
+
+      <h3>Social & Portfolio</h3>
+
+      <div className="social-links">
+
+        <a
+          href="https://www.instagram.com/routhu_soumith/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Instagram ↗
+        </a>
+
+        <a
+          href="https://github.com/routhusoumith-max"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub ↗
+        </a>
+
+        <a
+          href="https://soumith-portfolio-live.vercel.app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Portfolio ↗
+        </a>
+
+      </div>
+    </div>
+
+    {/* Resume Card */}
+    <div className="contact-card resume-card">
+      <div className="contact-card-icon">📄</div>
+
+      <h3>My Resume</h3>
+
+      <p>
+        View or download my resume and learn more
+        about my skills and experience.
+      </p>
+
+      <a
+        href="/resume.pdf"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="contact-button"
+      >
+        View Resume ↗
+      </a>
+    </div>
+
+  </div>
+
+  {/* Location */}
+  <div className="contact-location">
+    <span>📍</span>
+    <div>
+      <strong>ROUTHU SOUMITH</strong>
+      <p>Ekgaon, Nirmal District, Telangana, India</p>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         <section id="contact" className="contact-section">
           <span className="eyebrow">LET'S CREATE</span>
 
